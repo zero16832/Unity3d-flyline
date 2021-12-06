@@ -1,5 +1,37 @@
-- task: UnityBuildTask@3
-  inputs:
-    buildTarget: 'iOS'
-    outputPath: '$(Build.BinariesDirectory)'
-    outputFileName: 'drop'
+trigger: none
+
+parameters:
+  - name: pool
+    type: string
+    default: UnityWindowsPool1
+
+variables:
+  - template: variables.yml
+
+jobs:
+  - job: iOSUnityBuild
+    pool:
+      name: ${{parameters.pool}}
+    steps:
+      - checkout: self
+        lfs: true
+      - template: steps-disk.yml
+      - template: steps-unity.yml
+        parameters:
+          target: iOS
+          config: $(config)
+          publish: xcode
+  - job: iOSXcodeBuild
+    dependsOn: iOSUnityBuild
+    pool:
+      vmImage: macOS-latest
+    steps:
+      - template: steps-xcode.yml
+        parameters:
+          download: current
+          publish: ios
+      - template: steps-appcenter.yml
+        parameters:
+          target: iOS
+          config: $(config)
+          file: export/*.ipa
